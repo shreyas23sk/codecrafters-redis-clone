@@ -51,10 +51,17 @@ int main(int argc, char **argv)
   
   std::cout << "Waiting for a client to connect...\n";
   
-  int client = accept(server_fd, (struct sockaddr *) &client_addr, (socklen_t *) &client_addr_len);
+  int client_fd = accept(server_fd, (struct sockaddr *) &client_addr, (socklen_t *) &client_addr_len);
   std::cout << "Client connected\n";
 
-  send(client, "+PONG\r\n", 7, 0);
+  const char* client_command[1024];
+
+  while(recv(server_fd, client_command, sizeof(client_command), 0) > 0)
+  {
+    send(client_fd, "+PONG\r\n", 7, 0);
+  }
+
+
   close(server_fd);
 
   return 0;
