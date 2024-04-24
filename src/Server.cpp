@@ -76,6 +76,10 @@ int main(int argc, char **argv)
     threads.emplace_back(std::thread(handle_client, client_fd));
   }
 
+  for(auto& t : threads) {
+    t.join();
+  }
+
   close(server_fd);
 
   return 0;
