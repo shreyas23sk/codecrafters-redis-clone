@@ -4,4 +4,6 @@ set(CMAKE_CXX_STANDARD 20) # Enable the C++20 standard
 
 set(SOURCE_FILES src/Server.cpp)
 
+string(APPEND CMAKE_EXE_LINKER_FLAGS "pthread")
+
 add_executable(server ${SOURCE_FILES})
