@@ -39,6 +39,8 @@ int main(int argc, char **argv)
     std::cerr << "Failed to bind to port 6379\n";
     return 1;
   }
+
+  fork();
   
   int connection_backlog = 5;
   if (listen(server_fd, connection_backlog) != 0) {
@@ -58,7 +60,6 @@ int main(int argc, char **argv)
 
   while(recv(client_fd, client_command, sizeof(client_command), 0) > 0)
   {
-    fork();
     send(client_fd, "+PONG\r\n", 7, 0);
   }
 
