@@ -54,7 +54,7 @@ int main(int argc, char **argv)
   int client_fd = accept(server_fd, (struct sockaddr *) &client_addr, (socklen_t *) &client_addr_len);
   std::cout << "Client connected\n";
 
-  const char* client_command[1024];
+  char client_command[1024];
 
   while(recv(server_fd, client_command, sizeof(client_command), 0) > 0)
   {
