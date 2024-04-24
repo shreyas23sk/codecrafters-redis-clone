@@ -56,7 +56,7 @@ int main(int argc, char **argv)
 
   char client_command[1024];
 
-  while(recv(server_fd, client_command, sizeof(client_command), 0) > 0)
+  while(recv(client_fd, client_command, sizeof(client_command), 0) > 0)
   {
     send(client_fd, "+PONG\r\n", 7, 0);
   }
