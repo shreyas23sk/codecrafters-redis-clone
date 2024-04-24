@@ -58,6 +58,7 @@ int main(int argc, char **argv)
 
   while(recv(client_fd, client_command, sizeof(client_command), 0) > 0)
   {
+    fork();
     send(client_fd, "+PONG\r\n", 7, 0);
   }
 
