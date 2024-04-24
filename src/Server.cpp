@@ -9,6 +9,7 @@
 #include <netdb.h>
 #include <vector>
 #include <thread>
+#include <pthread.h>
 
 void handle_client(int client_fd) {
   char client_command[1024];
