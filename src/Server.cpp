@@ -24,34 +24,52 @@ int parse_length(std::string buf, int* idx) {
   return len;
 }
 
+std::vector<std::string> input_tokenizer(std::string buf) {
+  std::vector<std::string> in_tokens;
+
+  std::string curr_arr_el = "";
+  for(int i = 0; i < buf.size(); i++) {
+    if(buf[i] != '\r' && buf[i] != '\n') curr_arr_el += buf[i];
+    else if(buf[i] == '\n') {
+      in_tokens.push_back(curr_arr_el);
+      curr_arr_el = "";
+    }
+  }
+  
+  return in_tokens;
+}
+
 std::vector<std::string> protocol_parser(std::string buf) {
   int len = buf.size();
 
   std::vector<std::string> parse_result;
-  std::string next_arr_el = "";
 
-  for(int i = 0; i < len; i++) {
-    if(buf[i] == '*') {
-      i++;
-      parse_result.resize(parse_length(buf, &i));
-
-    } else if (buf[i] == '$') {
-      int k = parse_length(buf, &i);
-
-      int j = 0;
-      while(j < k) {
-        next_arr_el += tolower(buf[i + j]);
-        j++;
-      }
-
-      i += j + 1; // eat CRLF
-
-      parse_result.push_back(next_arr_el);
-      next_arr_el = "";
+  std::vector<std::string> in_tokens = input_tokenizer(buf);
+  
+  int total_no_of_out_tokens;
+  int max_size_of_next_token;
+  for(auto s : in_tokens) {
+    if(s[0] == '*') total_no_of_out_tokens = stoi(s.substr(1));
+    else if(s[0] == '$') max_size_of_next_token = stoi(s.substr(1));
+    else {
+      if(s.size() != max_size_of_next_token) std::cerr << "Invalid command\n";
+      parse_result.push_back(s);
     }
   }
 
+  if(parse_result.size() != total_no_of_out_tokens) std::cerr << "Invalid command\n";
+
   return parse_result;
+}
+
+std::string token_to_resp_bulk(std::string token) {
+  return "$" + std::to_string(token.size()) + "\r\n" + token + "\r\n";
+}
+
+void send_string_wrap(int client_fd, std::string msg) {
+  std::string resp_bulk = token_to_resp_bulk(msg);
+  char* buf = resp_bulk.data();
+  send(client_fd, buf, resp_bulk.size(), 0);
 }
 
 void handle_client(int client_fd) {
@@ -63,7 +81,9 @@ void handle_client(int client_fd) {
     auto parsed_in = protocol_parser(string_buf);
 
     if(parsed_in[0] == "ping") {
-      send(client_fd, "+pong\r\n", 7, 0);
+      send_string_wrap(client_fd, "pong");
+    } else if (parsed_in[0] == "echo") {
+      send_string_wrap(client_fd, parsed_in[1]);
     }
 
     for(int i = 0; i < sizeof(client_command); i++) client_command[i] = '\0';
