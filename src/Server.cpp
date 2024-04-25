@@ -44,7 +44,7 @@ std::vector<std::string> protocol_parser(std::string buf) {
         j++;
       }
 
-      i += j + 2; // eat CRLF
+      i += j + 1; // eat CRLF
 
       parse_result.push_back(next_arr_el);
       next_arr_el = "";
