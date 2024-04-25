@@ -11,22 +11,73 @@
 #include <thread>
 #include <pthread.h>
 
+
+int parse_length(char* buf, int* idx) {
+  int len = 0;
+
+  while(buf[*idx] != '\r') {
+    len = len * 10 + (buf[*idx] - '0');
+    (*idx)++;
+  }
+  (*idx)++; // consume \n
+
+  return len;
+}
+
+std::vector<std::string> protocol_parser(char* buf) {
+  int len = strlen(buf);
+
+  std::string unparsed_str;
+  unparsed_str.assign(buf, buf + len); 
+
+  std::vector<std::string> parse_result;
+  std::string next_arr_el = "";
+
+  for(int i = 0; i < len; i++) {
+    if(buf[i] == '*') {
+      i++;
+      parse_result.resize(parse_length(buf, &i));
+
+    } else if (buf[i] == '$') {
+      int k = parse_length(buf, &i);
+
+      int j = 0;
+      while(j < k) {
+        next_arr_el += buf[i + j];
+        j++;
+      }
+
+      i += j + 2; // eat CRLF
+
+      parse_result.push_back(next_arr_el);
+      next_arr_el = "";
+    }
+  }
+}
+
 void handle_client(int client_fd) {
-  char client_command[1024];
+  char client_command[1024] = {'\0'};
 
   while(recv(client_fd, client_command, sizeof(client_command), 0) > 0)
   {
-    send(client_fd, "+PONG\r\n", 7, 0);
+    auto parsed_in = protocol_parser(client_command);
+
+    for(int i = 0; i < sizeof(client_command); i++) client_command[i] = '\0';
   }
 
   close(client_fd);
 }
 
 
+
 int main(int argc, char **argv)
 {
   // You can use print statements as follows for debugging, they'll be visible when running tests.
   std::cout << "Logs from your program will appear here!\n";
+
+  std::cout << "Protocol parser test\n";
+  auto test_result = protocol_parser("*2\r\n$5\r\nhello\r\n$5\r\nworld\r\n");
+  for(auto s : test_result) std::cout << s << "\n";
 
   // Uncomment this block to pass the first stage
   //
