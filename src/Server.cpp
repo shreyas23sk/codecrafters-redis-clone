@@ -122,7 +122,7 @@ void handle_client(int client_fd)
 
       if(parsed_in.size() > 3) {
         if(parsed_in[3] == "px") {
-          valid_until_ts[parsed_in[1]] = get_current_timestamp() + stoi(parsed_in[4]);
+          valid_until_ts[parsed_in[1]] = get_current_timestamp() + (int64_t) stoi(parsed_in[4]);
         }
       }
 
@@ -130,7 +130,7 @@ void handle_client(int client_fd)
     }
     else if (parsed_in[0] == "get")
     {
-      if (!kv.contains(parsed_in[1]) || (valid_until_ts.contains(parsed_in[1]) && get_current_timestamp() > valid_until_ts[parsed_in[0]]))
+      if (!kv.contains(parsed_in[1]) || (valid_until_ts.contains(parsed_in[1]) && get_current_timestamp() > valid_until_ts[parsed_in[1]]))
         send_string_wrap(client_fd, "");
       else
         send_string_wrap(client_fd, kv[parsed_in[1]]);
