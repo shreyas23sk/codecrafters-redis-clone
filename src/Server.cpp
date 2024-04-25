@@ -40,7 +40,7 @@ std::vector<std::string> protocol_parser(std::string buf) {
 
       int j = 0;
       while(j < k) {
-        next_arr_el += buf[i + j];
+        next_arr_el += tolower(buf[i + j]);
         j++;
       }
 
@@ -61,6 +61,10 @@ void handle_client(int client_fd) {
   {
     std::string string_buf {client_command};
     auto parsed_in = protocol_parser(string_buf);
+
+    if(parsed_in[0] == "ping") {
+      send(client_fd, "+pong\r\n", 7, 0);
+    }
 
     for(int i = 0; i < sizeof(client_command); i++) client_command[i] = '\0';
   }
