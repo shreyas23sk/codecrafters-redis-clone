@@ -94,6 +94,7 @@ std::string token_to_resp_bulk(std::string token)
 void send_string_wrap(int client_fd, std::string msg)
 {
   std::string resp_bulk = token_to_resp_bulk(msg);
+  std::cout << resp_bulk << "\n";
   char *buf = resp_bulk.data();
   send(client_fd, buf, resp_bulk.size(), 0);
 }
