@@ -121,7 +121,7 @@ void handle_client(int client_fd)
 
       if(parsed_in.size() > 3) {
         if(parsed_in[3] == "px") {
-          valid_until_ts[parsed_in[0]] = get_current_timestamp() + stoi(parsed_in[4]);
+          valid_until_ts[parsed_in[1]] = get_current_timestamp() + stoi(parsed_in[4]);
         }
       }
 
