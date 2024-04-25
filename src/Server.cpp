@@ -81,7 +81,7 @@ void handle_client(int client_fd) {
     auto parsed_in = protocol_parser(string_buf);
 
     if(parsed_in[0] == "ping") {
-      send_string_wrap(client_fd, "pong");
+      send_string_wrap(client_fd, "PONG");
     } else if (parsed_in[0] == "echo") {
       send_string_wrap(client_fd, parsed_in[1]);
     }
