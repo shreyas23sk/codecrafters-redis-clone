@@ -12,7 +12,7 @@
 #include <pthread.h>
 
 
-int parse_length(char* buf, int* idx) {
+int parse_length(std::string buf, int* idx) {
   int len = 0;
 
   while(buf[*idx] != '\r') {
@@ -24,11 +24,8 @@ int parse_length(char* buf, int* idx) {
   return len;
 }
 
-std::vector<std::string> protocol_parser(char* buf) {
-  int len = strlen(buf);
-
-  std::string unparsed_str;
-  unparsed_str.assign(buf, buf + len); 
+std::vector<std::string> protocol_parser(std::string buf) {
+  int len = buf.size();
 
   std::vector<std::string> parse_result;
   std::string next_arr_el = "";
@@ -53,6 +50,8 @@ std::vector<std::string> protocol_parser(char* buf) {
       next_arr_el = "";
     }
   }
+
+  return parse_result;
 }
 
 void handle_client(int client_fd) {
@@ -60,7 +59,8 @@ void handle_client(int client_fd) {
 
   while(recv(client_fd, client_command, sizeof(client_command), 0) > 0)
   {
-    auto parsed_in = protocol_parser(client_command);
+    std::string string_buf {client_command};
+    auto parsed_in = protocol_parser(string_buf);
 
     for(int i = 0; i < sizeof(client_command); i++) client_command[i] = '\0';
   }
