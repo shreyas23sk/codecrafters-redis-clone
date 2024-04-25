@@ -8,9 +8,12 @@
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <vector>
+#include <map>
 #include <thread>
 #include <pthread.h>
 
+
+std::map<std::string, std::string> kv;
 
 int parse_length(std::string buf, int* idx) {
   int len = 0;
@@ -63,6 +66,7 @@ std::vector<std::string> protocol_parser(std::string buf) {
 }
 
 std::string token_to_resp_bulk(std::string token) {
+  if(token.empty()) return "$-1\r\n"; 
   return "$" + std::to_string(token.size()) + "\r\n" + token + "\r\n";
 }
 
@@ -84,6 +88,12 @@ void handle_client(int client_fd) {
       send_string_wrap(client_fd, "PONG");
     } else if (parsed_in[0] == "echo") {
       send_string_wrap(client_fd, parsed_in[1]);
+    } else if (parsed_in[0] == "set") {
+      kv[parsed_in[1]] = parsed_in[2];
+      send_string_wrap(client_fd, "OK");
+    } else if (parsed_in[0] == "get") {
+      if(!kv.contains(parsed_in[1])) send_string_wrap(client_fd, "");
+      else send_string_wrap (client_fd, kv[parsed_in[1]]);
     }
 
     for(int i = 0; i < sizeof(client_command); i++) client_command[i] = '\0';
