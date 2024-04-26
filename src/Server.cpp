@@ -18,7 +18,7 @@ std::map<std::string, int64_t> valid_until_ts;
 
 int64_t get_current_timestamp()
 {
-  return (int64_t) std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+  return (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 }
 
 int parse_length(std::string buf, int *idx)
@@ -105,35 +105,44 @@ void handle_client(int client_fd)
 
   while (recv(client_fd, client_command, sizeof(client_command), 0) > 0)
   {
-    std::string string_buf{client_command};
+    std::string string_buf{cliensudo snap install whatsapp-for-linuxt_command};
     auto parsed_in = protocol_parser(string_buf);
 
-    if (parsed_in[0] == "ping")
+    std::string command = parsed_in[0];
+
+    if (command == "ping")
     {
       send_string_wrap(client_fd, "PONG");
     }
-    else if (parsed_in[0] == "echo")
+    else if (command == "echo")
     {
       send_string_wrap(client_fd, parsed_in[1]);
     }
-    else if (parsed_in[0] == "set")
+    else if (command == "set")
     {
-      kv[parsed_in[1]] = parsed_in[2];
+      std::string key = parsed_in[1];
+      std::string value = parsed_in[2];
 
-      if(parsed_in.size() > 3) {
-        if(parsed_in[3] == "px") {
-          valid_until_ts[parsed_in[1]] = get_current_timestamp() + (int64_t) stoi(parsed_in[4]);
+      kv[key] = value;
+
+      if (parsed_in.size() > 3)
+      {
+        if (parsed_in[3] == "px")
+        {
+          valid_until_ts[key] = get_current_timestamp() + (int64_t)stoi(parsed_in[4]);
         }
       }
 
       send_string_wrap(client_fd, "OK");
     }
-    else if (parsed_in[0] == "get")
+    else if (command == "get")
     {
-      if (!kv.contains(parsed_in[1]) || (valid_until_ts.contains(parsed_in[1]) && get_current_timestamp() > valid_until_ts[parsed_in[1]]))
+      std::string key = parsed_in[1];
+
+      if (!kv.contains(key) || (valid_until_ts.contains(key) && get_current_timestamp() > valid_until_ts[key]))
         send_string_wrap(client_fd, "");
       else
-        send_string_wrap(client_fd, kv[parsed_in[1]]);
+        send_string_wrap(client_fd, kv[key]);
     }
 
     for (int i = 0; i < sizeof(client_command); i++)
@@ -148,10 +157,20 @@ int main(int argc, char **argv)
   // You can use print statements as follows for debugging, they'll be visible when running tests.
   std::cout << "Logs from your program will appear here!\n";
 
-  std::cout << "Protocol parser test\n";
-  auto test_result = protocol_parser("*2\r\n$5\r\nhello\r\n$5\r\nworld\r\n");
-  for (auto s : test_result)
-    std::cout << s << "\n";
+  // std::cout << "Protocol parser test\n";
+  // auto test_result = protocol_parser("*2\r\n$5\r\nhello\r\n$5\r\nworld\r\n");
+  // for (auto s : test_result)
+  //   std::cout << s << "\n";
+
+  int port = 6379;
+  if(argc > 1) 
+  {
+    if(strcmp(argv[1], "--port") == 0) 
+    {
+      std::string port_in {argv[2]};
+      port = stoi(port_in);
+    }
+  }
 
   // Uncomment this block to pass the first stage
   //
@@ -174,7 +193,7 @@ int main(int argc, char **argv)
   struct sockaddr_in server_addr;
   server_addr.sin_family = AF_INET;
   server_addr.sin_addr.s_addr = INADDR_ANY;
-  server_addr.sin_port = htons(6379);
+  server_addr.sin_port = htons(port);
 
   if (bind(server_fd, (struct sockaddr *)&server_addr, sizeof(server_addr)) != 0)
   {
