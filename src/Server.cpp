@@ -183,6 +183,17 @@ void handle_client(int client_fd)
     {
       send(client_fd, "+OK\r\n", 5, 0);
     }
+    else if (command == "psync") 
+    {
+      std::string recv_master_id = parsed_in[1];
+      int recv_master_offset = stoi(parsed_in[2]);
+
+      if(recv_master_id == "?" && recv_master_offset == -1) 
+      {
+        std::string resp = "+FULLRESYNC " + master_repl_id + " " + std::to_string(master_repl_offset) + "\r\n";
+        send(client_fd, resp.data(), resp.size(), 0);
+      }
+    }
 
     for (int i = 0; i < sizeof(client_command); i++)
       client_command[i] = '\0';
@@ -261,6 +272,8 @@ int main(int argc, char **argv)
     send_string_vector_wrap(replica_fd, {"REPLCONF", "capa", "psync2"});
     recv(replica_fd, buf, sizeof(buf), 0);
     memset(buf, 0, 1024);
+
+    send_string_vector_wrap(replica_fd, {"PSYNC", "?", "-1"});
   }
 
   // Since the tester restarts your program quite often, setting SO_REUSEADDR
