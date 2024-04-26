@@ -186,6 +186,10 @@ int main(int argc, char **argv)
       std::string port_in {argv[2]};
       self_port = stoi(port_in);
     }
+  }
+
+  if(argc > 2) 
+  {
 
     if(strcmp(argv[3], "--replicaof") == 0)
     {
