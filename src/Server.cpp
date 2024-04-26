@@ -244,7 +244,7 @@ int main(int argc, char **argv)
       std::cerr << "Replica failed to connect to master\n";
     }
 
-    send_string_wrap(replica_fd, "ping");
+    send_string_vector_wrap(replica_fd, {"ping"});
   }
 
   // Since the tester restarts your program quite often, setting SO_REUSEADDR
