@@ -105,7 +105,7 @@ void handle_client(int client_fd)
 
   while (recv(client_fd, client_command, sizeof(client_command), 0) > 0)
   {
-    std::string string_buf{cliensudo snap install whatsapp-for-linuxt_command};
+    std::string string_buf{client_command};
     auto parsed_in = protocol_parser(string_buf);
 
     std::string command = parsed_in[0];
