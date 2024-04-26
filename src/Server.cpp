@@ -171,7 +171,7 @@ void handle_client(int client_fd)
       {
         if(master_port == -1) 
         {
-          std::string resp = "role:master\r\nmaster_repl_id:" + master_repl_id + "\r\nmaster_repl_offset:" + std::to_string(master_repl_offset);
+          std::string resp = "role:master\r\nmaster_replid:" + master_repl_id + "\r\nmaster_repl_offset:" + std::to_string(master_repl_offset);
         
           send_string_wrap(client_fd, resp);
         }
