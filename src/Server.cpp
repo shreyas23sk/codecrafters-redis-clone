@@ -16,6 +16,8 @@
 std::map<std::string, std::string> kv;
 std::map<std::string, int64_t> valid_until_ts;
 
+int master_port = -1; // -1 -> master
+
 int64_t get_current_timestamp()
 {
   return (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
@@ -152,7 +154,10 @@ void handle_client(int client_fd)
 
       if(args == 1 && parsed_in[1] == "replication")
       {
-        send_string_wrap(client_fd, "role:master");
+        if(master_port == -1) 
+          send_string_wrap(client_fd, "role:master");
+        else 
+          send_string_wrap(client_fd, "role:slave");
       }
     }
 
@@ -173,14 +178,21 @@ int main(int argc, char **argv)
   // for (auto s : test_result)
   //   std::cout << s << "\n";
 
-  int port = 6379;
+  int self_port = 6379;
   if(argc > 1) 
   {
     if(strcmp(argv[1], "--port") == 0) 
     {
       std::string port_in {argv[2]};
-      port = stoi(port_in);
+      self_port = stoi(port_in);
     }
+
+    if(strcmp(argv[3], "--replicaof") == 0)
+    {
+      std::string master {argv[4]};
+      master_port = stoi(master);
+    }
+
   }
 
   // Uncomment this block to pass the first stage
@@ -204,7 +216,7 @@ int main(int argc, char **argv)
   struct sockaddr_in server_addr;
   server_addr.sin_family = AF_INET;
   server_addr.sin_addr.s_addr = INADDR_ANY;
-  server_addr.sin_port = htons(port);
+  server_addr.sin_port = htons(self_port);
 
   if (bind(server_fd, (struct sockaddr *)&server_addr, sizeof(server_addr)) != 0)
   {
