@@ -17,6 +17,8 @@ std::map<std::string, std::string> kv;
 std::map<std::string, int64_t> valid_until_ts;
 
 int master_port = -1; // -1 -> master
+std::string master_repl_id = "8371b4fb1155b71f4a04d3e1bc3e18c4a990aeeb";
+int master_repl_offset = 0; 
 
 int64_t get_current_timestamp()
 {
@@ -101,6 +103,19 @@ void send_string_wrap(int client_fd, std::string msg)
   send(client_fd, buf, resp_bulk.size(), 0);
 }
 
+void send_string_vector_wrap(int client_fd, std::vector<std::string> msgs) 
+{
+  std::string combined_resp = "*" + std::to_string(msgs.size()) + "\r\n";
+
+  for(std::string str : msgs) 
+  {
+    combined_resp += token_to_resp_bulk(str);
+  }
+
+  char *buf = combined_resp.data();
+  send(client_fd, buf, combined_resp.size(), 0);
+}
+
 void handle_client(int client_fd)
 {
   char client_command[1024] = {'\0'};
@@ -155,7 +170,14 @@ void handle_client(int client_fd)
       if(args == 1 && parsed_in[1] == "replication")
       {
         if(master_port == -1) 
-          send_string_wrap(client_fd, "role:master");
+        {
+          std::vector<std::string> repl_info;
+          repl_info.push_back("role:master");
+          repl_info.push_back("master_repl_id:" + master_repl_id);
+          repl_info.push_back("master_repl_offset:" + std::to_string(master_repl_offset));
+
+          send_string_vector_wrap(client_fd, repl_info);
+        }
         else 
           send_string_wrap(client_fd, "role:slave");
       }
