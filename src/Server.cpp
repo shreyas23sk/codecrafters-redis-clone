@@ -171,12 +171,9 @@ void handle_client(int client_fd)
       {
         if(master_port == -1) 
         {
-          std::vector<std::string> repl_info;
-          repl_info.push_back("role:master");
-          repl_info.push_back("master_repl_id:" + master_repl_id);
-          repl_info.push_back("master_repl_offset:" + std::to_string(master_repl_offset));
-
-          send_string_vector_wrap(client_fd, repl_info);
+          std::string resp = "role:master\r\nmaster_repl_id:" + master_repl_id + "\r\nmaster_repl_offset:" + std::to_string(master_repl_offset);
+        
+          send_string_wrap(client_fd, resp);
         }
         else 
           send_string_wrap(client_fd, "role:slave");
