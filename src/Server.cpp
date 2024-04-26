@@ -190,10 +190,13 @@ int main(int argc, char **argv)
 
   if(argc > 3) 
   {
-
+    int port_idx = 4;
+    if(strcmp(argv[4], "localhost") == 0) 
+      port_idx = 5;
+    
     if(strcmp(argv[3], "--replicaof") == 0)
     {
-      std::string master {argv[4]};
+      std::string master {argv[port_idx]};
       master_port = stoi(master);
     }
 
