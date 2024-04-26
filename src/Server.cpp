@@ -254,7 +254,7 @@ int main(int argc, char **argv)
     recv(replica_fd, buf, sizeof(buf), 0);
     memset(buf, 0, 1024);
 
-    send_string_vector_wrap(replica_fd, {"REPLCONF", "listening-port", std::to_string(master_port)});
+    send_string_vector_wrap(replica_fd, {"REPLCONF", "listening-port", std::to_string(self_port)});
     recv(replica_fd, buf, sizeof(buf), 0);
     memset(buf, 0, 1024);
     
