@@ -179,6 +179,10 @@ void handle_client(int client_fd)
           send_string_wrap(client_fd, "role:slave");
       }
     }
+    else if (command == "replconf") 
+    {
+      send(client_fd, "+OK\r\n", 5, 0);
+    }
 
     for (int i = 0; i < sizeof(client_command); i++)
       client_command[i] = '\0';
@@ -245,6 +249,8 @@ int main(int argc, char **argv)
     }
 
     send_string_vector_wrap(replica_fd, {"ping"});
+    send_string_vector_wrap(replica_fd, {"REPLCONF", "listening-port", std::to_string(master_port)});
+    send_string_vector_wrap(replica_fd, {"REPLCONF", "capa", "psync2"});
   }
 
   // Since the tester restarts your program quite often, setting SO_REUSEADDR
