@@ -247,10 +247,20 @@ int main(int argc, char **argv)
     {
       std::cerr << "Replica failed to connect to master\n";
     }
+    
+    char buf[1024] = {'\0'};
 
     send_string_vector_wrap(replica_fd, {"ping"});
+    recv(replica_fd, buf, sizeof(buf), 0);
+    memset(buf, 0, 1024);
+
     send_string_vector_wrap(replica_fd, {"REPLCONF", "listening-port", std::to_string(master_port)});
+    recv(replica_fd, buf, sizeof(buf), 0);
+    memset(buf, 0, 1024);
+    
     send_string_vector_wrap(replica_fd, {"REPLCONF", "capa", "psync2"});
+    recv(replica_fd, buf, sizeof(buf), 0);
+    memset(buf, 0, 1024);
   }
 
   // Since the tester restarts your program quite often, setting SO_REUSEADDR
