@@ -106,6 +106,8 @@ void handle_client(int client_fd)
   while (recv(client_fd, client_command, sizeof(client_command), 0) > 0)
   {
     std::string string_buf{client_command};
+
+    for(int i = 0; i < string_buf.size(); i++) string_buf[i] = tolower(string_buf[i]);
     auto parsed_in = protocol_parser(string_buf);
 
     std::string command = parsed_in[0];
