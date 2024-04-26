@@ -144,6 +144,15 @@ void handle_client(int client_fd)
       else
         send_string_wrap(client_fd, kv[key]);
     }
+    else if (command == "info") 
+    {
+      int args = parsed_in.size() - 1;
+
+      if(args == 1 && parsed_in[1] == "replication")
+      {
+        send_string_wrap(client_fd, "role:master");
+      }
+    }
 
     for (int i = 0; i < sizeof(client_command); i++)
       client_command[i] = '\0';
