@@ -182,8 +182,9 @@ void send_string_vector_wrap(int client_fd, std::vector<std::string> msgs)
 
 void send_rdb_file_data(int client_fd, std::string hex) 
 {
-  std::string resp = "$" + std::to_string(hex.size()) + "\r\n" + hex_to_bin(hex);
-
+  std::string bin = hex_to_bin(hex);
+  std::string resp = "$" + std::to_string(bin.size()) + "\r\n" + bin;
+  std::cout << resp << "\n";
   char* buf = resp.data();
   send(client_fd, buf, resp.size(), 0);
 }
