@@ -359,7 +359,7 @@ int main(int argc, char **argv)
     recv(replica_fd, buf, sizeof(buf), 0);
     memset(buf, 0, 1024);
 
-    threads.emplace_back(std::thread(handle_client, replica_fd));
+    //threads.emplace_back(std::thread(handle_client, replica_fd));
   }
 
   // Since the tester restarts your program quite often, setting SO_REUSEADDR
