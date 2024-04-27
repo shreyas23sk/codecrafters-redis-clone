@@ -162,6 +162,8 @@ void handle_client(int client_fd)
   {
     std::string string_buf{client_command};
 
+    std::cout << string_buf << "\n";
+
     for (int i = 0; i < string_buf.size(); i++)
       string_buf[i] = tolower(string_buf[i]);
     
