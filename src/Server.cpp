@@ -313,7 +313,6 @@ int main(int argc, char **argv)
   }
 
 
-  std::vector<std::thread> threads;
   
   int replica_fd;
   if(master_port == -1) 
@@ -364,7 +363,8 @@ int main(int argc, char **argv)
           recv(replica_fd, buf, sizeof(buf), 0);
           memset(buf, 0, 1024);
 
-          threads.emplace_back(std::thread(handle_client, replica_fd));
+          std::thread t(handle_client, replica_fd);
+          t.detach();
         }
     }
 
@@ -407,12 +407,8 @@ int main(int argc, char **argv)
     client_fd = accept(server_fd, (struct sockaddr *)&client_addr, (socklen_t *)&client_addr_len);
     std::cout << "Client connected\n";
 
-    threads.emplace_back(std::thread(handle_client, client_fd));
-  }
-
-  for(auto &t : threads)
-  {
-    t.join();
+    std::thread t(handle_client, client_fd);
+    t.detach();
   }
 
   close(server_fd);
