@@ -185,7 +185,7 @@ void handle_client(int client_fd)
       }
       else 
       {
-        resp_arr_len = string_buf.size() - 1 - resp_arr_starting_idx[i];
+        resp_arr_len = string_buf.size() - resp_arr_starting_idx[i];
       }
 
       std::cout << resp_arr_starting_idx[i] << " " << resp_arr_len << "\n";
