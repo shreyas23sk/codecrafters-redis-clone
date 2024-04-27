@@ -16,77 +16,49 @@
 std::map<std::string, std::string> kv;
 std::map<std::string, int64_t> valid_until_ts;
 
-std::string hex_empty_rdb = "524544495330303131fa0972656469732d76657205372e322e30fa0a72656469732d62697473c040fa056374696d65c26d08bc65fa08757365642d6d656dc2b0c41000fa08616f662d62617365c000fff06e3bfec0ff5aa2"; 
+std::string hex_empty_rdb = "524544495330303131fa0972656469732d76657205372e322e30fa0a72656469732d62697473c040fa056374696d65c26d08bc65fa08757365642d6d656dc2b0c41000fa08616f662d62617365c000fff06e3bfec0ff5aa2";
 
 int master_port = -1; // -1 -> master
 std::string master_repl_id = "8371b4fb1155b71f4a04d3e1bc3e18c4a990aeeb";
-int master_repl_offset = 0; 
+int master_repl_offset = 0;
 
 int64_t get_current_timestamp()
 {
   return (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 }
 
-std::string hex_to_bin(std::string hex_str) 
+std::string hex_to_bin(std::string s)
 {
-  std::string res = "";
-  
-  for(int i = 0; i < hex_str.size(); i++)
+
+  std::string m;
+
+  for (int i = 0; i < s.size() - 1; i += 2)
   {
-    switch(hex_str[i])
-    {
-      case '0':
-        res += "0000";
-        break;
-      case '1':
-        res += "0001";
-        break;  
-      case '2':
-        res += "0010";
-        break;
-      case '3':
-        res += "0011";
-        break;
-      case '4':
-        res += "0100";
-        break;
-      case '5':
-        res += "0101";
-        break;
-      case '6':
-        res += "0110";
-        break;
-      case '7':
-        res += "0111";
-        break;
-      case '8':
-        res += "1000";
-        break;
-      case '9':
-        res += "1001";
-        break;
-      case 'a':
-        res += "1010";
-        break;
-      case 'b':
-        res += "1011";
-        break;
-      case 'c':
-        res += "1100";
-        break;
-      case 'd':
-        res += "1101";
-        break;
-      case 'e':
-        res += "1110";
-        break;
-      case 'f':
-        res += "1111";
-        break;
-    }
+
+    int a = s[i + 1];
+
+    int b = s[i];
+
+    if (a >= 'a')
+
+      a = a - 'a' + 10;
+
+    else
+
+      a = a - '0';
+
+    if (b >= 'a')
+
+      b = b - 'a' + 10;
+
+    else
+
+      b = b - '0';
+
+    m += char(b * 16 + a);
   }
 
-  return res;
+  return m;
 }
 
 int parse_length(std::string buf, int *idx)
@@ -167,11 +139,11 @@ void send_string_wrap(int client_fd, std::string msg)
   send(client_fd, buf, resp_bulk.size(), 0);
 }
 
-void send_string_vector_wrap(int client_fd, std::vector<std::string> msgs) 
+void send_string_vector_wrap(int client_fd, std::vector<std::string> msgs)
 {
   std::string combined_resp = "*" + std::to_string(msgs.size()) + "\r\n";
 
-  for(std::string str : msgs) 
+  for (std::string str : msgs)
   {
     combined_resp += token_to_resp_bulk(str);
   }
@@ -180,15 +152,14 @@ void send_string_vector_wrap(int client_fd, std::vector<std::string> msgs)
   send(client_fd, buf, combined_resp.size(), 0);
 }
 
-void send_rdb_file_data(int client_fd, std::string hex) 
+void send_rdb_file_data(int client_fd, std::string hex)
 {
   std::string bin = hex_to_bin(hex);
-  std::string resp = "$" + std::to_string(hex.size()/2) + "\r\n" + bin;
+  std::string resp = "$" + std::to_string(hex.size() / 2) + "\r\n" + bin;
   std::cout << resp << "\n";
-  char* buf = resp.data();
+  char *buf = resp.data();
   send(client_fd, buf, resp.size(), 0);
 }
-
 
 void handle_client(int client_fd)
 {
@@ -198,7 +169,8 @@ void handle_client(int client_fd)
   {
     std::string string_buf{client_command};
 
-    for(int i = 0; i < string_buf.size(); i++) string_buf[i] = tolower(string_buf[i]);
+    for (int i = 0; i < string_buf.size(); i++)
+      string_buf[i] = tolower(string_buf[i]);
     auto parsed_in = protocol_parser(string_buf);
 
     std::string command = parsed_in[0];
@@ -237,39 +209,38 @@ void handle_client(int client_fd)
       else
         send_string_wrap(client_fd, kv[key]);
     }
-    else if (command == "info") 
+    else if (command == "info")
     {
       int args = parsed_in.size() - 1;
 
-      if(args == 1 && parsed_in[1] == "replication")
+      if (args == 1 && parsed_in[1] == "replication")
       {
-        if(master_port == -1) 
+        if (master_port == -1)
         {
           std::string resp = "role:master\r\nmaster_replid:" + master_repl_id + "\r\nmaster_repl_offset:" + std::to_string(master_repl_offset);
-        
+
           send_string_wrap(client_fd, resp);
         }
-        else 
+        else
           send_string_wrap(client_fd, "role:slave");
       }
     }
-    else if (command == "replconf") 
+    else if (command == "replconf")
     {
       send(client_fd, "+OK\r\n", 5, 0);
     }
-    else if (command == "psync") 
+    else if (command == "psync")
     {
       std::string recv_master_id = parsed_in[1];
       int recv_master_offset = stoi(parsed_in[2]);
 
-      if(recv_master_id == "?" && recv_master_offset == -1) 
+      if (recv_master_id == "?" && recv_master_offset == -1)
       {
         std::string resp = "+FULLRESYNC " + master_repl_id + " " + std::to_string(master_repl_offset) + "\r\n";
         send(client_fd, resp.data(), resp.size(), 0);
         send_string_wrap(client_fd, hex_to_bin(hex_empty_rdb));
         send_rdb_file_data(client_fd, hex_empty_rdb);
       }
-
     }
 
     for (int i = 0; i < sizeof(client_command); i++)
@@ -290,27 +261,26 @@ int main(int argc, char **argv)
   //   std::cout << s << "\n";
 
   int self_port = 6379;
-  if(argc > 1) 
+  if (argc > 1)
   {
-    if(strcmp(argv[1], "--port") == 0) 
+    if (strcmp(argv[1], "--port") == 0)
     {
-      std::string port_in {argv[2]};
+      std::string port_in{argv[2]};
       self_port = stoi(port_in);
     }
   }
 
-  if(argc > 3) 
+  if (argc > 3)
   {
     int port_idx = 4;
-    if(strcmp(argv[4], "localhost") == 0) 
+    if (strcmp(argv[4], "localhost") == 0)
       port_idx = 5;
-    
-    if(strcmp(argv[3], "--replicaof") == 0)
+
+    if (strcmp(argv[3], "--replicaof") == 0)
     {
-      std::string master {argv[port_idx]};
+      std::string master{argv[port_idx]};
       master_port = stoi(master);
     }
-
   }
 
   // Uncomment this block to pass the first stage
@@ -322,20 +292,20 @@ int main(int argc, char **argv)
     return 1;
   }
 
-  if(master_port != -1) 
+  if (master_port != -1)
   {
     int replica_fd = socket(AF_INET, SOCK_STREAM, 0);
 
     struct sockaddr_in master_addr;
     master_addr.sin_family = AF_INET;
     master_addr.sin_port = htons(master_port);
-    master_addr.sin_addr.s_addr = INADDR_ANY; 
+    master_addr.sin_addr.s_addr = INADDR_ANY;
 
-    if(connect(replica_fd, (struct sockaddr *) &master_addr, sizeof(master_addr)) == -1) 
+    if (connect(replica_fd, (struct sockaddr *)&master_addr, sizeof(master_addr)) == -1)
     {
       std::cerr << "Replica failed to connect to master\n";
     }
-    
+
     char buf[1024] = {'\0'};
 
     send_string_vector_wrap(replica_fd, {"ping"});
@@ -345,7 +315,7 @@ int main(int argc, char **argv)
     send_string_vector_wrap(replica_fd, {"REPLCONF", "listening-port", std::to_string(self_port)});
     recv(replica_fd, buf, sizeof(buf), 0);
     memset(buf, 0, 1024);
-    
+
     send_string_vector_wrap(replica_fd, {"REPLCONF", "capa", "psync2"});
     recv(replica_fd, buf, sizeof(buf), 0);
     memset(buf, 0, 1024);
