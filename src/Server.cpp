@@ -226,7 +226,6 @@ void handle_client(int client_fd)
       {
         std::string resp = "+FULLRESYNC " + master_repl_id + " " + std::to_string(master_repl_offset) + "\r\n";
         send(client_fd, resp.data(), resp.size(), 0);
-        send_string_wrap(client_fd, hex_to_bin(hex_empty_rdb));
         send_rdb_file_data(client_fd, hex_empty_rdb);
       }
     }
