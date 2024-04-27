@@ -291,9 +291,13 @@ int main(int argc, char **argv)
     return 1;
   }
 
+
+  std::vector<std::thread> threads;
+  
+  int replica_fd;
   if (master_port != -1)
   {
-    int replica_fd = socket(AF_INET, SOCK_STREAM, 0);
+    replica_fd = socket(AF_INET, SOCK_STREAM, 0);
 
     struct sockaddr_in master_addr;
     master_addr.sin_family = AF_INET;
@@ -321,6 +325,9 @@ int main(int argc, char **argv)
 
     send_string_vector_wrap(replica_fd, {"PSYNC", "?", "-1"});
     recv(replica_fd, buf, sizeof(buf), 0);
+    memset(buf, 0, 1024);
+
+    threads.emplace_back(std::thread(handle_client, replica_fd));
   }
 
   // Since the tester restarts your program quite often, setting SO_REUSEADDR
@@ -352,8 +359,6 @@ int main(int argc, char **argv)
 
   struct sockaddr_in client_addr;
   int client_addr_len = sizeof(client_addr);
-
-  std::vector<std::thread> threads;
 
   std::cout << "Waiting for a client to connect...\n";
 
