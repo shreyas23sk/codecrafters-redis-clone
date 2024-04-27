@@ -351,7 +351,6 @@ int main(int argc, char **argv)
   int client_fd;
   while (true)
   {
-    client_fd = accept(server_fd, (struct sockaddr *)&client_addr, (socklen_t *)&client_addr_len);
     if(master_port == -1) 
     {
 
@@ -405,7 +404,7 @@ int main(int argc, char **argv)
         }
     }
 
-    
+    client_fd = accept(server_fd, (struct sockaddr *)&client_addr, (socklen_t *)&client_addr_len);
     std::cout << "Client connected\n";
 
     threads.emplace_back(std::thread(handle_client, client_fd));
