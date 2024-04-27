@@ -16,6 +16,8 @@
 std::map<std::string, std::string> kv;
 std::map<std::string, int64_t> valid_until_ts;
 
+std::string hex_empty_rdb = "524544495330303131fa0972656469732d76657205372e322e30fa0a72656469732d62697473c040fa056374696d65c26d08bc65fa08757365642d6d656dc2b0c41000fa08616f662d62617365c000fff06e3bfec0ff5aa2"; 
+
 int master_port = -1; // -1 -> master
 std::string master_repl_id = "8371b4fb1155b71f4a04d3e1bc3e18c4a990aeeb";
 int master_repl_offset = 0; 
@@ -23,6 +25,68 @@ int master_repl_offset = 0;
 int64_t get_current_timestamp()
 {
   return (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+}
+
+std::string hex_to_bin(std::string hex_str) 
+{
+  std::string res = "";
+  
+  for(int i = 0; i < hex_str.size(); i++)
+  {
+    switch(hex_str[i])
+    {
+      case '0':
+        res += "0000";
+        break;
+      case '1':
+        res += "0001";
+        break;  
+      case '2':
+        res += "0010";
+        break;
+      case '3':
+        res += "0011";
+        break;
+      case '4':
+        res += "0100";
+        break;
+      case '5':
+        res += "0101";
+        break;
+      case '6':
+        res += "0110";
+        break;
+      case '7':
+        res += "0111";
+        break;
+      case '8':
+        res += "1000";
+        break;
+      case '9':
+        res += "1001";
+        break;
+      case 'a':
+        res += "1010";
+        break;
+      case 'b':
+        res += "1011";
+        break;
+      case 'c':
+        res += "1100";
+        break;
+      case 'd':
+        res += "1101";
+        break;
+      case 'e':
+        res += "1110";
+        break;
+      case 'f':
+        res += "1111";
+        break;
+    }
+  }
+
+  return res;
 }
 
 int parse_length(std::string buf, int *idx)
@@ -192,7 +256,9 @@ void handle_client(int client_fd)
       {
         std::string resp = "+FULLRESYNC " + master_repl_id + " " + std::to_string(master_repl_offset) + "\r\n";
         send(client_fd, resp.data(), resp.size(), 0);
+        send_string_wrap(client_fd, hex_to_bin(hex_empty_rdb));
       }
+
     }
 
     for (int i = 0; i < sizeof(client_command); i++)
