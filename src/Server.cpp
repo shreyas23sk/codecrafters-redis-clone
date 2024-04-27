@@ -21,6 +21,8 @@ std::string hex_empty_rdb = "524544495330303131fa0972656469732d76657205372e322e3
 int master_port = -1; // -1 -> master
 std::string master_repl_id = "8371b4fb1155b71f4a04d3e1bc3e18c4a990aeeb";
 int master_repl_offset = 0;
+std::vector<int> replicas_fd;
+
 
 int64_t get_current_timestamp()
 {
@@ -186,7 +188,15 @@ void handle_client(int client_fd)
         }
       }
 
-      send_string_wrap(client_fd, "OK");
+      if(master_port == -1) 
+      {
+        send_string_wrap(client_fd, "OK");
+
+        for(auto fd : replicas_fd)
+        {
+          send_string_vector_wrap(fd, parsed_in);
+        }
+      }
     }
     else if (command == "get")
     {
@@ -216,6 +226,8 @@ void handle_client(int client_fd)
     else if (command == "replconf")
     {
       send(client_fd, "+OK\r\n", 5, 0);
+      if(!replicas_fd.empty() && replicas_fd.back() != client_fd)
+        replicas_fd.push_back(client_fd);
     }
     else if (command == "psync")
     {
