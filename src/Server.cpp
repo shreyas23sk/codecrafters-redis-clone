@@ -188,7 +188,7 @@ void handle_client(int client_fd)
         resp_arr_len = string_buf.size() - 1 - resp_arr_starting_idx[i];
       }
 
-      std::cout << string_buf.substr(resp_arr_starting_idx[i], resp_arr_len);
+      std::cout << resp_arr_starting_idx[i] << " " << resp_arr_len << "\n";
       auto parsed_in = protocol_parser(string_buf.substr(resp_arr_starting_idx[i], resp_arr_len));
 
       std::string command = parsed_in[0];
