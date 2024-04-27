@@ -106,6 +106,9 @@ std::vector<std::string> protocol_parser(std::string buf)
         std::cerr << "Invalid command\n";
       parse_result.push_back(s);
     }
+
+    if(parse_result.size() == total_no_of_out_tokens) 
+      break;
   }
 
   if (parse_result.size() != total_no_of_out_tokens)
@@ -161,87 +164,111 @@ void handle_client(int client_fd)
 
     for (int i = 0; i < string_buf.size(); i++)
       string_buf[i] = tolower(string_buf[i]);
-    auto parsed_in = protocol_parser(string_buf);
+    
+    std::vector<int> resp_arr_starting_idx;
 
-    std::string command = parsed_in[0];
-
-    if (command == "ping")
+    for(int i = 0; i < string_buf.size(); i++) 
     {
-      send_string_wrap(client_fd, "PONG");
+      if(string_buf[i] == '*') 
+        resp_arr_starting_idx.push_back(i);
     }
-    else if (command == "echo")
+    
+    for(int i = 0; i < resp_arr_starting_idx.size(); i++) 
     {
-      send_string_wrap(client_fd, parsed_in[1]);
-    }
-    else if (command == "set")
-    {
-      std::string key = parsed_in[1];
-      std::string value = parsed_in[2];
-
-      kv[key] = value;
-
-      if (parsed_in.size() > 3)
+      int resp_arr_len;
+      if(i != resp_arr_starting_idx.size() - 1)
       {
-        if (parsed_in[3] == "px")
-        {
-          valid_until_ts[key] = get_current_timestamp() + (int64_t)stoi(parsed_in[4]);
-        }
+        resp_arr_len = resp_arr_starting_idx[i + 1] - resp_arr_starting_idx[i];
+      }
+      else 
+      {
+        resp_arr_len = string_buf.size() - 1 - resp_arr_starting_idx[i];
       }
 
-      if(master_port == -1) 
-      {
-        send_string_wrap(client_fd, "OK");
+      auto parsed_in = protocol_parser(string_buf.substr(resp_arr_starting_idx[i], resp_arr_len));
 
-        for(auto fd : replicas_fd)
+      std::string command = parsed_in[0];
+
+      if (command == "ping")
+      {
+        send_string_wrap(client_fd, "PONG");
+      }
+      else if (command == "echo")
+      {
+        send_string_wrap(client_fd, parsed_in[1]);
+      }
+      else if (command == "set")
+      {
+        std::string key = parsed_in[1];
+        std::string value = parsed_in[2];
+
+        kv[key] = value;
+
+        if (parsed_in.size() > 3)
         {
-          std::cout << fd << "propagated\n";
-          send_string_vector_wrap(fd, parsed_in);
+          if (parsed_in[3] == "px")
+          {
+            valid_until_ts[key] = get_current_timestamp() + (int64_t)stoi(parsed_in[4]);
+          }
+        }
+
+        if(master_port == -1) 
+        {
+          send_string_wrap(client_fd, "OK");
+
+          for(auto fd : replicas_fd)
+          {
+            std::cout << fd << "propagated\n";
+            send_string_vector_wrap(fd, parsed_in);
+          }
         }
       }
-    }
-    else if (command == "get")
-    {
-      std::string key = parsed_in[1];
-
-      if (!kv.contains(key) || (valid_until_ts.contains(key) && get_current_timestamp() > valid_until_ts[key]))
-        send_string_wrap(client_fd, "");
-      else
-        send_string_wrap(client_fd, kv[key]);
-    }
-    else if (command == "info")
-    {
-      int args = parsed_in.size() - 1;
-
-      if (args == 1 && parsed_in[1] == "replication")
+      else if (command == "get")
       {
-        if (master_port == -1)
-        {
-          std::string resp = "role:master\r\nmaster_replid:" + master_repl_id + "\r\nmaster_repl_offset:" + std::to_string(master_repl_offset);
+        std::string key = parsed_in[1];
 
-          send_string_wrap(client_fd, resp);
-        }
+        if (!kv.contains(key) || (valid_until_ts.contains(key) && get_current_timestamp() > valid_until_ts[key]))
+          send_string_wrap(client_fd, "");
         else
-          send_string_wrap(client_fd, "role:slave");
+          send_string_wrap(client_fd, kv[key]);
       }
-    }
-    else if (command == "replconf")
-    {
-      send(client_fd, "+OK\r\n", 5, 0);
-      if(replicas_fd.empty() || replicas_fd.back() != client_fd)
-        replicas_fd.push_back(client_fd);
-    }
-    else if (command == "psync")
-    {
-      std::string recv_master_id = parsed_in[1];
-      int recv_master_offset = stoi(parsed_in[2]);
-
-      if (recv_master_id == "?" && recv_master_offset == -1)
+      else if (command == "info")
       {
-        std::string resp = "+FULLRESYNC " + master_repl_id + " " + std::to_string(master_repl_offset) + "\r\n";
-        send(client_fd, resp.data(), resp.size(), 0);
-        send_rdb_file_data(client_fd, hex_empty_rdb);
+        int args = parsed_in.size() - 1;
+
+        if (args == 1 && parsed_in[1] == "replication")
+        {
+          if (master_port == -1)
+          {
+            std::string resp = "role:master\r\nmaster_replid:" + master_repl_id + "\r\nmaster_repl_offset:" + std::to_string(master_repl_offset);
+
+            send_string_wrap(client_fd, resp);
+          }
+          else
+            send_string_wrap(client_fd, "role:slave");
+        }
+      }
+      else if (command == "replconf")
+      {
+        send(client_fd, "+OK\r\n", 5, 0);
+        if(replicas_fd.empty() || replicas_fd.back() != client_fd)
+          replicas_fd.push_back(client_fd);
+      }
+      else if (command == "psync")
+      {
+        std::string recv_master_id = parsed_in[1];
+        int recv_master_offset = stoi(parsed_in[2]);
+
+        if (recv_master_id == "?" && recv_master_offset == -1)
+        {
+          std::string resp = "+FULLRESYNC " + master_repl_id + " " + std::to_string(master_repl_offset) + "\r\n";
+          send(client_fd, resp.data(), resp.size(), 0);
+          send_rdb_file_data(client_fd, hex_empty_rdb);
+        }
       }
     }
+
+
 
     for (int i = 0; i < sizeof(client_command); i++)
       client_command[i] = '\0';
