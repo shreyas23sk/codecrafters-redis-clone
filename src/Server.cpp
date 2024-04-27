@@ -194,6 +194,7 @@ void handle_client(int client_fd)
 
         for(auto fd : replicas_fd)
         {
+          std::cout << fd << "propagated\n";
           send_string_vector_wrap(fd, parsed_in);
         }
       }
@@ -226,7 +227,7 @@ void handle_client(int client_fd)
     else if (command == "replconf")
     {
       send(client_fd, "+OK\r\n", 5, 0);
-      if(!replicas_fd.empty() && replicas_fd.back() != client_fd)
+      if(replicas_fd.empty() || replicas_fd.back() != client_fd)
         replicas_fd.push_back(client_fd);
     }
     else if (command == "psync")
