@@ -173,6 +173,9 @@ void handle_client(int client_fd)
         resp_arr_starting_idx.push_back(i);
     }
     
+    if(resp_arr_starting_idx.empty())
+      resp_arr_starting_idx.push_back(0);
+
     for(int i = 0; i < resp_arr_starting_idx.size(); i++) 
     {
       int resp_arr_len;
