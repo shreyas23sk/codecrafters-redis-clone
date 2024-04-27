@@ -338,7 +338,7 @@ int main(int argc, char **argv)
     
     char buf[1024] = {'\0'};
 
-    //send_string_vector_wrap(replica_fd, {"ping"});
+    send_string_vector_wrap(replica_fd, {"ping"});
     recv(replica_fd, buf, sizeof(buf), 0);
     memset(buf, 0, 1024);
 
