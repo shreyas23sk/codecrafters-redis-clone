@@ -301,19 +301,6 @@ int main(int argc, char **argv)
     }
   }
 
-  if (argc > 3)
-  {
-    int port_idx = 4;
-    if (strcmp(argv[4], "localhost") == 0)
-      port_idx = 5;
-
-    if (strcmp(argv[3], "--replicaof") == 0)
-    {
-      std::string master{argv[port_idx]};
-      master_port = stoi(master);
-    }
-  }
-
   // Uncomment this block to pass the first stage
   //
   int server_fd = socket(AF_INET, SOCK_STREAM, 0);
@@ -362,48 +349,63 @@ int main(int argc, char **argv)
   int client_fd;
   while (true)
   {
+    if(master_port == -1) 
+    {
+
+      if (argc > 3)
+      {
+        int port_idx = 4;
+        if (strcmp(argv[4], "localhost") == 0)
+          port_idx = 5;
+
+        if (strcmp(argv[3], "--replicaof") == 0)
+        {
+          std::string master{argv[port_idx]};
+          master_port = stoi(master);
+        }
+      }
+
+      int replica_fd;
+      if (master_port != -1)
+      {
+          replica_fd = socket(AF_INET, SOCK_STREAM, 0);
+
+          struct sockaddr_in master_addr;
+          master_addr.sin_family = AF_INET;
+          master_addr.sin_port = htons(master_port);
+          master_addr.sin_addr.s_addr = INADDR_ANY;
+
+          if (connect(replica_fd, (struct sockaddr *)&master_addr, sizeof(master_addr)) == -1)
+          {
+            std::cerr << "Replica failed to connect to master\n";
+          }
+
+          char buf[1024] = {'\0'};
+
+          send_string_vector_wrap(replica_fd, {"ping"});
+          recv(replica_fd, buf, sizeof(buf), 0);
+          memset(buf, 0, 1024);
+
+          send_string_vector_wrap(replica_fd, {"REPLCONF", "listening-port", std::to_string(self_port)});
+          recv(replica_fd, buf, sizeof(buf), 0);
+          memset(buf, 0, 1024);
+
+          send_string_vector_wrap(replica_fd, {"REPLCONF", "capa", "psync2"});
+          recv(replica_fd, buf, sizeof(buf), 0);
+          memset(buf, 0, 1024);
+
+          send_string_vector_wrap(replica_fd, {"PSYNC", "?", "-1"});
+          recv(replica_fd, buf, sizeof(buf), 0);
+          memset(buf, 0, 1024);
+
+          threads.emplace_back(std::thread(handle_client, replica_fd));
+        }
+    }
+
     client_fd = accept(server_fd, (struct sockaddr *)&client_addr, (socklen_t *)&client_addr_len);
     std::cout << "Client connected\n";
 
     threads.emplace_back(std::thread(handle_client, client_fd));
-  }
-
-
-  int replica_fd;
-  if (master_port != -1)
-  {
-    replica_fd = socket(AF_INET, SOCK_STREAM, 0);
-
-    struct sockaddr_in master_addr;
-    master_addr.sin_family = AF_INET;
-    master_addr.sin_port = htons(master_port);
-    master_addr.sin_addr.s_addr = INADDR_ANY;
-
-    if (connect(replica_fd, (struct sockaddr *)&master_addr, sizeof(master_addr)) == -1)
-    {
-      std::cerr << "Replica failed to connect to master\n";
-    }
-
-    char buf[1024] = {'\0'};
-
-    send_string_vector_wrap(replica_fd, {"ping"});
-    recv(replica_fd, buf, sizeof(buf), 0);
-    memset(buf, 0, 1024);
-
-    send_string_vector_wrap(replica_fd, {"REPLCONF", "listening-port", std::to_string(self_port)});
-    recv(replica_fd, buf, sizeof(buf), 0);
-    memset(buf, 0, 1024);
-
-    send_string_vector_wrap(replica_fd, {"REPLCONF", "capa", "psync2"});
-    recv(replica_fd, buf, sizeof(buf), 0);
-    memset(buf, 0, 1024);
-
-    send_string_vector_wrap(replica_fd, {"PSYNC", "?", "-1"});
-    recv(replica_fd, buf, sizeof(buf), 0);
-    memset(buf, 0, 1024);
-
-    handle_client(replica_fd);
-    //threads.emplace_back(std::thread(handle_client, replica_fd));
   }
 
   close(server_fd);
