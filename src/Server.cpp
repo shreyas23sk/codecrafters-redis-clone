@@ -351,6 +351,7 @@ int main(int argc, char **argv)
     memset(buf, 0, 1024);
 
     send_string_vector_wrap(replica_fd, {"PSYNC", "?", "-1"});
+    recv(replica_fd, buf, sizeof(buf), 0);
   }
 
   // Since the tester restarts your program quite often, setting SO_REUSEADDR
