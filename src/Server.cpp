@@ -162,7 +162,7 @@ std::string token_to_resp_bulk(std::string token)
 void send_string_wrap(int client_fd, std::string msg)
 {
   std::string resp_bulk = token_to_resp_bulk(msg);
-  std::cout << resp_bulk << "\n";
+  // std::cout << resp_bulk << "\n";
   char *buf = resp_bulk.data();
   send(client_fd, buf, resp_bulk.size(), 0);
 }
@@ -178,6 +178,14 @@ void send_string_vector_wrap(int client_fd, std::vector<std::string> msgs)
 
   char *buf = combined_resp.data();
   send(client_fd, buf, combined_resp.size(), 0);
+}
+
+void send_rdb_file_data(int client_fd, std::string hex) 
+{
+  std::string resp = "$" + std::to_string(hex.size()) + "\r\n" + hex_to_bin(hex);
+
+  char* buf = resp.data();
+  send(client_fd, buf, resp.size(), 0);
 }
 
 void handle_client(int client_fd)
@@ -257,6 +265,7 @@ void handle_client(int client_fd)
         std::string resp = "+FULLRESYNC " + master_repl_id + " " + std::to_string(master_repl_offset) + "\r\n";
         send(client_fd, resp.data(), resp.size(), 0);
         send_string_wrap(client_fd, hex_to_bin(hex_empty_rdb));
+        send_rdb_file_data(client_fd, hex_empty_rdb);
       }
 
     }
