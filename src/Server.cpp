@@ -27,38 +27,26 @@ int64_t get_current_timestamp()
   return (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 }
 
-std::string hex_to_bin(std::string s)
-{
+std::string hex_to_string(const std::string &hex) {
 
-  std::string m;
+    std::string result;
 
-  for (int i = 0; i < s.size() - 1; i += 2)
-  {
+    for(int i=0; i<hex.length(); i+=2) {
 
-    int a = s[i + 1];
+        unsigned int byte;
 
-    int b = s[i];
+        std::stringstream ss;
 
-    if (a >= 'a')
+        ss << std::hex << hex.substr(i, 2);
 
-      a = a - 'a' + 10;
+        ss >> byte;
 
-    else
+        result.push_back(static_cast<char>(byte));
 
-      a = a - '0';
+    }
 
-    if (b >= 'a')
+    return result;
 
-      b = b - 'a' + 10;
-
-    else
-
-      b = b - '0';
-
-    m += char(b * 16 + a);
-  }
-
-  return m;
 }
 
 int parse_length(std::string buf, int *idx)
@@ -154,8 +142,8 @@ void send_string_vector_wrap(int client_fd, std::vector<std::string> msgs)
 
 void send_rdb_file_data(int client_fd, std::string hex)
 {
-  std::string bin = hex_to_bin(hex);
-  std::string resp = "$" + std::to_string(hex.size() / 2) + "\r\n" + bin;
+  std::string bin = hex_to_string(hex);
+  std::string resp = "$" + std::to_string(bin.size()) + "\r\n" + bin;
   std::cout << resp << "\n";
   char *buf = resp.data();
   send(client_fd, buf, resp.size(), 0);
