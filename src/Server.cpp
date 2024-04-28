@@ -363,8 +363,8 @@ int main(int argc, char **argv)
           recv(replica_fd, buf, sizeof(buf), 0);
           memset(buf, 0, 1024);
 
-          // std::thread t(handle_client, replica_fd);
-          // t.detach();
+          std::thread t(handle_client, replica_fd);
+          t.detach();
         }
     }
 
