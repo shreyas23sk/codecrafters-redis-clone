@@ -236,6 +236,8 @@ void handle_client(int client_fd)
         resp_arr_len = string_buf.size() - resp_arr_starting_idx[i];
       }
 
+      repl_offset += resp_arr_len;
+
       std::cout << resp_arr_starting_idx[i] << " " << resp_arr_len << "\n";
       auto parsed_in = protocol_parser(string_buf.substr(resp_arr_starting_idx[i], resp_arr_len));
 
@@ -306,7 +308,7 @@ void handle_client(int client_fd)
       {
         if(master_port != -1 && handshake_complete && parsed_in[1] == "getack") 
         {
-          send_string_vector_wrap(client_fd, {"REPLCONF", "ACK", std::to_string(repl_offset)});
+          send_string_vector_wrap(client_fd, {"REPLCONF", "ACK", std::to_string(repl_offset - resp_arr_len)});
         }
         else 
         {
@@ -328,7 +330,6 @@ void handle_client(int client_fd)
           // send_string_vector_wrap(client_fd, {"REPLCONF", "GETACK", "*"});
         }
 
-        repl_offset += resp_arr_len;
       }
     }
 
