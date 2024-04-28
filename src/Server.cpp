@@ -158,7 +158,7 @@ void send_rdb_file_data(int client_fd, std::string hex)
 
 void handle_client(int client_fd)
 {
-  char client_command[1024] = {'\0'};
+  char client_command[2048] = {'\0'};
 
   while (recv(client_fd, client_command, sizeof(client_command), 0) > 0)
   {
@@ -261,6 +261,7 @@ void handle_client(int client_fd)
       {
         if(master_port != -1 && handshake_complete && parsed_in[1] == "getack") 
         {
+          send(client_fd, "gotin", 5, 0);
           std::cout << "Hello there!";
           send_string_vector_wrap(client_fd, {"REPLCONF", "ACK", std::to_string(0)});
         }
@@ -281,7 +282,7 @@ void handle_client(int client_fd)
           std::string resp = "+FULLRESYNC " + master_repl_id + " " + std::to_string(master_repl_offset) + "\r\n";
           send(client_fd, resp.data(), resp.size(), 0);
           send_rdb_file_data(client_fd, hex_empty_rdb);
-          // send_string_vector_wrap(client_fd, {"REPLCONF", "GETACK", "*"});
+          send_string_vector_wrap(client_fd, {"REPLCONF", "GETACK", "*"});
         }
 
       }
@@ -362,19 +363,19 @@ int main(int argc, char **argv)
 
           send_string_vector_wrap(master_fd, {"ping"});
           recv(master_fd, buf, sizeof(buf), 0);
-          memset(buf, 0, 1024);
+          memset(buf, 0, 2048);
 
           send_string_vector_wrap(master_fd, {"REPLCONF", "listening-port", std::to_string(self_port)});
           recv(master_fd, buf, sizeof(buf), 0);
-          memset(buf, 0, 1024);
+          memset(buf, 0, 2048);
 
           send_string_vector_wrap(master_fd, {"REPLCONF", "capa", "psync2"});
           recv(master_fd, buf, sizeof(buf), 0);
-          memset(buf, 0, 1024);
+          memset(buf, 0, 2048);
 
           send_string_vector_wrap(master_fd, {"PSYNC", "?", "-1"});
           recv(master_fd, buf, sizeof(buf), 0);
-          memset(buf, 0, 1024);
+          memset(buf, 0, 2048);
 
           handshake_complete = true;
 
