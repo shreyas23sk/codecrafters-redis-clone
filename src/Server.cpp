@@ -126,6 +126,27 @@ std::string token_to_resp_bulk(std::string token)
   return "$" + std::to_string(token.size()) + "\r\n" + token + "\r\n";
 }
 
+void recv_rdb_file(int master_fd) {
+  char buf[1024];
+
+  bool size_determined = false;
+  int size = 0;
+
+  while(!size_determined) 
+  {
+    recv(master_fd, buf, 1, 0);
+    if(buf[0] == '$' || buf[0] == '\r') 
+      continue;
+    else if (buf[0] == '\n')
+      size_determined = true;
+    else 
+      size = size * 10 + (buf[0] - '0');
+  }
+
+  recv(master_fd, buf, size * 2, 0);
+  printf("%s\n", buf);
+}
+
 void send_string_wrap(int client_fd, std::string msg)
 {
   std::string resp_bulk = token_to_resp_bulk(msg);
@@ -164,7 +185,7 @@ void handle_client(int client_fd)
   {
     std::string string_buf{client_command};
 
-    //std::cout << string_buf << "\n";
+    std::cout << string_buf << "\n";
 
     for (int i = 0; i < string_buf.size(); i++)
       string_buf[i] = tolower(string_buf[i]);
@@ -373,8 +394,7 @@ int main(int argc, char **argv)
           memset(buf, 0, 2048);
 
           send_string_vector_wrap(master_fd, {"PSYNC", "?", "-1"});
-          while(buf[0] != '*') // consume/write to RDB file
-            recv(master_fd, buf, 1, 0);
+          recv_rdb_file(master_fd);
           memset(buf, 0, 2048);
 
           handshake_complete = true;
