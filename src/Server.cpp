@@ -244,7 +244,8 @@ void handle_client(int client_fd)
 
       if (command == "ping")
       {
-        send_string_wrap(client_fd, "PONG");
+        if(master_port == - 1) 
+          send_string_wrap(client_fd, "PONG");
       }
       else if (command == "echo")
       {
