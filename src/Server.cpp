@@ -331,6 +331,16 @@ void handle_client(int client_fd)
         }
 
       }
+      else if (command == "wait") 
+      {
+        int no_of_expected_replicas = stoi(parsed_in[1]);
+        int timeout = stoi(parsed_in[2]);
+
+        int no_of_replies_recvd = 0;
+
+        std::string dead_resp = ":" + to_string(no_of_expected_replicas) + "\r\n";
+        send(client_fd, dead_resp.data(), dead_resp.size(), 0);
+      }
     }
 
 
