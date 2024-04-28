@@ -173,7 +173,7 @@ void handle_client(int client_fd)
 
     for(int i = 0; i < string_buf.size(); i++) 
     {
-      if(string_buf[i] == '*') 
+      if(string_buf[i] == '*' && string_buf[i + 1] != '\r') 
         resp_arr_starting_idx.push_back(i);
     }
     
