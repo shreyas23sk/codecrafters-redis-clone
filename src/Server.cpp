@@ -338,7 +338,7 @@ void handle_client(int client_fd)
 
         int no_of_replies_recvd = 0;
 
-        std::string dead_resp = ":" + to_string(no_of_expected_replicas) + "\r\n";
+        std::string dead_resp = ":" + std::to_string(replicas_fd.size()) + "\r\n";
         send(client_fd, dead_resp.data(), dead_resp.size(), 0);
       }
     }
