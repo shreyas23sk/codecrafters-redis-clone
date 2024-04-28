@@ -373,9 +373,8 @@ int main(int argc, char **argv)
           memset(buf, 0, 2048);
 
           send_string_vector_wrap(master_fd, {"PSYNC", "?", "-1"});
-          recv(master_fd, buf, sizeof(buf), 0);
-          memset(buf, 0, 2048);
-          recv(master_fd, buf, sizeof(buf), 0);
+          while(buf[0] != '*') // consume/write to RDB file
+            recv(master_fd, buf, 1, 0);
           memset(buf, 0, 2048);
 
           handshake_complete = true;
