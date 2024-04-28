@@ -98,7 +98,7 @@ std::vector<std::string> protocol_parser(std::string buf)
   int max_size_of_next_token;
   for (auto s : in_tokens)
   {
-    if (s[0] == '*')
+    if (s[0] == '*' && s.size() > 1)
       total_no_of_out_tokens = stoi(s.substr(1));
     else if (s[0] == '$')
       max_size_of_next_token = stoi(s.substr(1));
@@ -112,7 +112,7 @@ std::vector<std::string> protocol_parser(std::string buf)
     if(parse_result.size() == total_no_of_out_tokens) 
       break;
   }
-
+  
   if (parse_result.size() != total_no_of_out_tokens)
     std::cerr << "Invalid command\n";
 
@@ -126,7 +126,19 @@ std::string token_to_resp_bulk(std::string token)
   return "$" + std::to_string(token.size()) + "\r\n" + token + "\r\n";
 }
 
-void recv_rdb_file(int master_fd) {
+void recv_repl_id(int master_fd) 
+{
+  // can be extended to read the repl_id and repl_offset value
+  char* buf;
+
+  while(buf[0] != '\n') 
+  {
+    recv(master_fd, buf, 1, 0);
+  }
+}
+
+void recv_rdb_file(int master_fd) 
+{
   char buf[1024];
 
   bool size_determined = false;
@@ -135,16 +147,25 @@ void recv_rdb_file(int master_fd) {
   while(!size_determined) 
   {
     recv(master_fd, buf, 1, 0);
+    std::cout << buf[0] <<"\n";
+
     if(buf[0] == '$' || buf[0] == '\r') 
       continue;
     else if (buf[0] == '\n')
       size_determined = true;
     else 
       size = size * 10 + (buf[0] - '0');
-  }
 
-  recv(master_fd, buf, size * 2, 0);
-  printf("%s\n", buf);
+  }
+  std::cout << size << "\n";
+  int bytes_recvd = 0;
+
+  while(bytes_recvd < size)
+  {
+    recv(master_fd, buf, 1, 0);
+    std::cout << buf[0];
+    bytes_recvd++;
+  }
 }
 
 void send_string_wrap(int client_fd, std::string msg)
@@ -394,6 +415,7 @@ int main(int argc, char **argv)
           memset(buf, 0, 2048);
 
           send_string_vector_wrap(master_fd, {"PSYNC", "?", "-1"});
+          recv_repl_id(master_fd);
           recv_rdb_file(master_fd);
           memset(buf, 0, 2048);
 
