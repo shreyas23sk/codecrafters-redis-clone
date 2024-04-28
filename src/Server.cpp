@@ -196,6 +196,7 @@ void handle_client(int client_fd)
       auto parsed_in = protocol_parser(string_buf.substr(resp_arr_starting_idx[i], resp_arr_len));
 
       std::string command = parsed_in[0];
+      std::cout << command << " received\n\n";
 
       if (command == "ping")
       {
@@ -258,7 +259,7 @@ void handle_client(int client_fd)
       }
       else if (command == "replconf")
       {
-        if(handshake_complete && parsed_in[1] == "getack") 
+        if(master_port != -1 && handshake_complete && parsed_in[1] == "getack") 
         {
           std::cout << "Hello there!";
           send_string_vector_wrap(client_fd, {"REPLCONF", "ACK", std::to_string(0)});
@@ -280,6 +281,7 @@ void handle_client(int client_fd)
           std::string resp = "+FULLRESYNC " + master_repl_id + " " + std::to_string(master_repl_offset) + "\r\n";
           send(client_fd, resp.data(), resp.size(), 0);
           send_rdb_file_data(client_fd, hex_empty_rdb);
+          // send_string_vector_wrap(client_fd, {"REPLCONF", "GETACK", "*"});
         }
 
       }
@@ -356,7 +358,7 @@ int main(int argc, char **argv)
             std::cerr << "Replica failed to connect to master\n";
           }
 
-          char buf[1024] = {'\0'};
+          char buf[2048] = {'\0'};
 
           send_string_vector_wrap(master_fd, {"ping"});
           recv(master_fd, buf, sizeof(buf), 0);
@@ -380,7 +382,7 @@ int main(int argc, char **argv)
           t.detach();
         }
     }
-
+  
   
   // Since the tester restarts your program quite often, setting SO_REUSEADDR
   // ensures that we don't run into 'Address already in use' errors
