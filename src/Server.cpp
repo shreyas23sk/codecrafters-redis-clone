@@ -409,8 +409,7 @@ int main(int argc, char **argv)
     client_fd = accept(server_fd, (struct sockaddr *)&client_addr, (socklen_t *)&client_addr_len);
     std::cout << "Client connected\n";
 
-    std::thread t(handle_client, client_fd);
-    threads.push_back(t);
+    threads.push_back(std::thread(handle_client, client_fd));
   }
 
   for(auto &t : threads) 
