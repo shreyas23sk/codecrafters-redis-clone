@@ -164,7 +164,7 @@ void handle_client(int client_fd)
   {
     std::string string_buf{client_command};
 
-    std::cout << string_buf << "\n";
+    //std::cout << string_buf << "\n";
 
     for (int i = 0; i < string_buf.size(); i++)
       string_buf[i] = tolower(string_buf[i]);
@@ -261,7 +261,6 @@ void handle_client(int client_fd)
       {
         if(master_port != -1 && handshake_complete && parsed_in[1] == "getack") 
         {
-          send(client_fd, "gotin", 5, 0);
           std::cout << "Hello there!";
           send_string_vector_wrap(client_fd, {"REPLCONF", "ACK", std::to_string(0)});
         }
@@ -374,6 +373,8 @@ int main(int argc, char **argv)
           memset(buf, 0, 2048);
 
           send_string_vector_wrap(master_fd, {"PSYNC", "?", "-1"});
+          recv(master_fd, buf, sizeof(buf), 0);
+          memset(buf, 0, 2048);
           recv(master_fd, buf, sizeof(buf), 0);
           memset(buf, 0, 2048);
 
