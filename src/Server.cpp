@@ -401,6 +401,8 @@ int main(int argc, char **argv)
 
   std::cout << "Waiting for a client to connect...\n";
 
+  std::vector<std::thread> threads;
+
   int client_fd;
   while (true)
   {
@@ -408,7 +410,12 @@ int main(int argc, char **argv)
     std::cout << "Client connected\n";
 
     std::thread t(handle_client, client_fd);
-    t.detach();
+    threads.push_back(t);
+  }
+
+  for(auto &t : threads) 
+  {
+    t.join();
   }
 
   close(server_fd);
