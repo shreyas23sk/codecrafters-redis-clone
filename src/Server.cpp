@@ -23,6 +23,8 @@ std::string master_repl_id = "8371b4fb1155b71f4a04d3e1bc3e18c4a990aeeb";
 int master_repl_offset = 0;
 std::vector<int> replicas_fd;
 
+std::map<int, bool> handshake_complete;
+
 
 int64_t get_current_timestamp()
 {
@@ -256,9 +258,16 @@ void handle_client(int client_fd)
       }
       else if (command == "replconf")
       {
-        send(client_fd, "+OK\r\n", 5, 0);
-        if(replicas_fd.empty() || replicas_fd.back() != client_fd)
-          replicas_fd.push_back(client_fd);
+        if(handshake_complete[client_fd] && parsed_in[1] == "getack") 
+        {
+          send_string_vector_wrap(client_fd, {"REPLCONF", "ACK", std::to_string(0)});
+        }
+        else 
+        {
+          send(client_fd, "+OK\r\n", 5, 0);
+          if(replicas_fd.empty() || replicas_fd.back() != client_fd)
+            replicas_fd.push_back(client_fd);
+        }
       }
       else if (command == "psync")
       {
@@ -271,6 +280,8 @@ void handle_client(int client_fd)
           send(client_fd, resp.data(), resp.size(), 0);
           send_rdb_file_data(client_fd, hex_empty_rdb);
         }
+
+        handshake_complete[client_fd] = true;
       }
     }
 
