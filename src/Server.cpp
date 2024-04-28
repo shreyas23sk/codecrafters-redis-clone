@@ -23,7 +23,7 @@ std::string master_repl_id = "8371b4fb1155b71f4a04d3e1bc3e18c4a990aeeb";
 int master_repl_offset = 0;
 std::vector<int> replicas_fd;
 
-std::map<int, bool> handshake_complete;
+bool handshake_complete;
 
 
 int64_t get_current_timestamp()
@@ -142,7 +142,7 @@ void send_string_vector_wrap(int client_fd, std::vector<std::string> msgs)
   {
     combined_resp += token_to_resp_bulk(str);
   }
-
+  std::cout << combined_resp << "\n";
   char *buf = combined_resp.data();
   send(client_fd, buf, combined_resp.size(), 0);
 }
@@ -258,8 +258,9 @@ void handle_client(int client_fd)
       }
       else if (command == "replconf")
       {
-        if(handshake_complete[client_fd] && parsed_in[1] == "getack") 
+        if(handshake_complete && parsed_in[1] == "getack") 
         {
+          std::cout << "Hello there!";
           send_string_vector_wrap(client_fd, {"REPLCONF", "ACK", std::to_string(0)});
         }
         else 
@@ -281,7 +282,6 @@ void handle_client(int client_fd)
           send_rdb_file_data(client_fd, hex_empty_rdb);
         }
 
-        handshake_complete[client_fd] = true;
       }
     }
 
@@ -325,7 +325,7 @@ int main(int argc, char **argv)
 
 
   
-  int replica_fd;
+  int master_fd;
   if(master_port == -1) 
     {
 
@@ -344,37 +344,39 @@ int main(int argc, char **argv)
 
       if (master_port != -1)
       {
-          replica_fd = socket(AF_INET, SOCK_STREAM, 0);
+          master_fd = socket(AF_INET, SOCK_STREAM, 0);
 
           struct sockaddr_in master_addr;
           master_addr.sin_family = AF_INET;
           master_addr.sin_port = htons(master_port);
           master_addr.sin_addr.s_addr = INADDR_ANY;
 
-          if (connect(replica_fd, (struct sockaddr *)&master_addr, sizeof(master_addr)) == -1)
+          if (connect(master_fd, (struct sockaddr *)&master_addr, sizeof(master_addr)) == -1)
           {
             std::cerr << "Replica failed to connect to master\n";
           }
 
           char buf[1024] = {'\0'};
 
-          send_string_vector_wrap(replica_fd, {"ping"});
-          recv(replica_fd, buf, sizeof(buf), 0);
+          send_string_vector_wrap(master_fd, {"ping"});
+          recv(master_fd, buf, sizeof(buf), 0);
           memset(buf, 0, 1024);
 
-          send_string_vector_wrap(replica_fd, {"REPLCONF", "listening-port", std::to_string(self_port)});
-          recv(replica_fd, buf, sizeof(buf), 0);
+          send_string_vector_wrap(master_fd, {"REPLCONF", "listening-port", std::to_string(self_port)});
+          recv(master_fd, buf, sizeof(buf), 0);
           memset(buf, 0, 1024);
 
-          send_string_vector_wrap(replica_fd, {"REPLCONF", "capa", "psync2"});
-          recv(replica_fd, buf, sizeof(buf), 0);
+          send_string_vector_wrap(master_fd, {"REPLCONF", "capa", "psync2"});
+          recv(master_fd, buf, sizeof(buf), 0);
           memset(buf, 0, 1024);
 
-          send_string_vector_wrap(replica_fd, {"PSYNC", "?", "-1"});
-          recv(replica_fd, buf, sizeof(buf), 0);
+          send_string_vector_wrap(master_fd, {"PSYNC", "?", "-1"});
+          recv(master_fd, buf, sizeof(buf), 0);
           memset(buf, 0, 1024);
 
-          std::thread t(handle_client, replica_fd);
+          handshake_complete = true;
+
+          std::thread t(handle_client, master_fd);
           t.detach();
         }
     }
