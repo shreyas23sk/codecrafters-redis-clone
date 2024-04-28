@@ -23,6 +23,8 @@ std::string master_repl_id = "8371b4fb1155b71f4a04d3e1bc3e18c4a990aeeb";
 int master_repl_offset = 0;
 std::vector<int> replicas_fd;
 
+int repl_offset = 0;
+
 bool handshake_complete;
 
 
@@ -238,7 +240,7 @@ void handle_client(int client_fd)
       auto parsed_in = protocol_parser(string_buf.substr(resp_arr_starting_idx[i], resp_arr_len));
 
       std::string command = parsed_in[0];
-      std::cout << command << " received\n\n";
+
 
       if (command == "ping")
       {
@@ -303,8 +305,7 @@ void handle_client(int client_fd)
       {
         if(master_port != -1 && handshake_complete && parsed_in[1] == "getack") 
         {
-          std::cout << "Hello there!";
-          send_string_vector_wrap(client_fd, {"REPLCONF", "ACK", std::to_string(0)});
+          send_string_vector_wrap(client_fd, {"REPLCONF", "ACK", std::to_string(repl_offset)});
         }
         else 
         {
@@ -326,6 +327,7 @@ void handle_client(int client_fd)
           // send_string_vector_wrap(client_fd, {"REPLCONF", "GETACK", "*"});
         }
 
+        repl_offset += resp_arr_len;
       }
     }
 
