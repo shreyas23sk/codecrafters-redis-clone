@@ -12,6 +12,8 @@
 #include <chrono>
 #include <thread>
 #include <pthread.h>
+#include <mutex>
+#include <condition_variable>
 
 std::map<std::string, std::string> kv;
 std::map<std::string, int64_t> valid_until_ts;
@@ -22,6 +24,13 @@ int master_port = -1; // -1 -> master
 std::string master_repl_id = "8371b4fb1155b71f4a04d3e1bc3e18c4a990aeeb";
 int master_repl_offset = 0;
 std::vector<int> replicas_fd;
+
+// wait implementation
+std::map<int, int> expected_replica_offset;
+std::map<int, int> recvd_replica_offset;
+int unacked_replicas;
+std::condition_variable wait_cv;
+std::mutex wait_mutex;
 
 int repl_offset = 0;
 
@@ -170,15 +179,17 @@ void recv_rdb_file(int master_fd)
   }
 }
 
-void send_string_wrap(int client_fd, std::string msg)
+int send_string_wrap(int client_fd, std::string msg)
 {
   std::string resp_bulk = token_to_resp_bulk(msg);
   // std::cout << resp_bulk << "\n";
   char *buf = resp_bulk.data();
   send(client_fd, buf, resp_bulk.size(), 0);
+
+  return resp_bulk.size();
 }
 
-void send_string_vector_wrap(int client_fd, std::vector<std::string> msgs)
+int send_string_vector_wrap(int client_fd, std::vector<std::string> msgs)
 {
   std::string combined_resp = "*" + std::to_string(msgs.size()) + "\r\n";
 
@@ -189,6 +200,8 @@ void send_string_vector_wrap(int client_fd, std::vector<std::string> msgs)
   std::cout << combined_resp << "\n";
   char *buf = combined_resp.data();
   send(client_fd, buf, combined_resp.size(), 0);
+
+  return combined_resp.size();
 }
 
 void send_rdb_file_data(int client_fd, std::string hex)
@@ -274,8 +287,7 @@ void handle_client(int client_fd)
 
           for(auto fd : replicas_fd)
           {
-            std::cout << fd << "propagated\n";
-            send_string_vector_wrap(fd, parsed_in);
+            int bytes_sent = send_string_vector_wrap(fd, parsed_in);
           }
         }
       }
@@ -310,6 +322,15 @@ void handle_client(int client_fd)
         {
           send_string_vector_wrap(client_fd, {"REPLCONF", "ACK", std::to_string(repl_offset - resp_arr_len)});
         }
+        else if(parsed_in[1] == "ack")
+        {
+          std::cout << "hello from replica to master\n";
+          if(unacked_replicas > 0) 
+            unacked_replicas--;
+
+          if(unacked_replicas == 0)
+            wait_cv.notify_all();
+        }
         else 
         {
           send(client_fd, "+OK\r\n", 5, 0);
@@ -336,10 +357,29 @@ void handle_client(int client_fd)
         int no_of_expected_replicas = stoi(parsed_in[1]);
         int timeout = stoi(parsed_in[2]);
 
-        int no_of_replies_recvd = 0;
+        unacked_replicas = no_of_expected_replicas;
 
-        std::string dead_resp = ":" + std::to_string(replicas_fd.size()) + "\r\n";
-        send(client_fd, dead_resp.data(), dead_resp.size(), 0);
+        std::thread([timeout, client_fd, no_of_expected_replicas] () {
+          std::unique_lock<std::mutex> lock(wait_mutex);
+
+          for(auto fd : replicas_fd) 
+          {
+            int bytes_sent = send_string_vector_wrap(fd, {"REPLCONF", "GETACK", "*"});
+          }
+
+          auto wait_until_ts = std::chrono::system_clock::now() + std::chrono::milliseconds(timeout);
+          
+          wait_cv.wait_until(lock, wait_until_ts, [] () {
+            return unacked_replicas == 0;
+          });
+
+          int unhandled_replica_num = no_of_expected_replicas - unacked_replicas;
+          int num = unhandled_replica_num == 0 ? replicas_fd.size() : unhandled_replica_num;
+
+          std::string dead_resp = ":" + std::to_string(num) + "\r\n";
+          send(client_fd, dead_resp.data(), dead_resp.size(), 0);
+        }).detach();
+
       }
     }
 
